@@ -82,9 +82,7 @@ All commands require the "Manage Server" permission to use.
 
 ### Creating a Channel Creator
 
-```
-/createcommschannel name:[channel name] role:[minimum role required] limit:[user limit]
-```
+Use the `/createcommschannel` command, which takes the following parameters:
 
 - **name** (required): The name for the creation channel
 - **role** (optional): The minimum role required to create a channel (defaults to @everyone)
