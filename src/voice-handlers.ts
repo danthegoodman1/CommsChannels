@@ -139,14 +139,11 @@ async function handleUserLeftChannel(state: VoiceState) {
   try {
     // No members left in the channel, delete it
     if (channel) {
+      deleteCreatedVoiceChannel(state.channelId!)
       await channel.delete(`Last user left the dynamically created channel`)
       logger.info(`Deleted empty voice channel ${channel.name}`)
     }
   } catch (error) {
     logger.error(`Failed to delete voice channel: ${error}`)
-  } finally {
-    // Remove the channel from tracking
-    deleteCreatedVoiceChannel(state.channelId!)
-    logger.info(`Deleted channel from tracking ${state.channelId}`)
   }
 }
