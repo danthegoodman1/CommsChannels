@@ -65,40 +65,40 @@ client.on(
 
 // Add channel deletion event listener
 client.on(Events.ChannelDelete, async (channel) => {
-  try {
-    // Check if this was a creation channel
-    if (channel.type === ChannelType.GuildVoice) {
-      const creationChannel = getCreationChannelById(channel.id)
-      if (creationChannel) {
-        // This was a creation channel, remove it from the database
-        deleteCreationChannel(channel.id)
-        logger.info(
-          `Removed creation channel ${channel.name} (${channel.id}) from database after Discord channel deletion`
-        )
-      }
+  // Only process voice channels
+  if (channel.type !== ChannelType.GuildVoice) return
 
-      // Also check if it was a created voice channel
-      const createdChannel = getCreatedVoiceChannel(channel.id)
-      if (createdChannel) {
-        // This was a dynamically created channel, remove it from tracking
-        deleteCreatedVoiceChannel(channel.id)
-        logger.info(
-          `Removed created channel ${channel.name} (${channel.id}) from tracking after Discord channel deletion`
-        )
-      }
-    }
-  } catch (error) {
-    const errorMessage = String(error)
-    if (
-      errorMessage.includes("Missing Access") ||
-      errorMessage.includes("50001")
-    ) {
+  // Get the channel ID now since we need it in multiple places
+  const channelId = channel.id
+  const channelName = channel.name
+
+  // First check if this was a creation channel
+  try {
+    const creationChannel = getCreationChannelById(channelId)
+    if (creationChannel) {
+      // This was a creation channel, remove it from the database
+      deleteCreationChannel(channelId)
       logger.info(
-        `Non-critical error during channel deletion handling: ${errorMessage}`
+        `Removed creation channel ${channelName} (${channelId}) from database after Discord channel deletion`
       )
-    } else {
-      logger.error(`Error handling channel deletion: ${errorMessage}`)
     }
+  } catch (creationError) {
+    logger.error(`Error handling creation channel deletion: ${creationError}`)
+    // Continue to the next check even if this one failed
+  }
+
+  // Then check if it was a created voice channel
+  try {
+    const createdChannel = getCreatedVoiceChannel(channelId)
+    if (createdChannel) {
+      // This was a dynamically created channel, remove it from tracking
+      deleteCreatedVoiceChannel(channelId)
+      logger.info(
+        `Removed created channel ${channelName} (${channelId}) from tracking after Discord channel deletion`
+      )
+    }
+  } catch (createdError) {
+    logger.error(`Error handling created channel deletion: ${createdError}`)
   }
 })
 
