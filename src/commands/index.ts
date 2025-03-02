@@ -55,6 +55,7 @@ export async function registerCommands(client: Client, clientId: string) {
       }
     })
   } catch (error) {
-    logger.error(`Error registering application commands: ${error}`)
+    logger.error("Error registering application commands:")
+    logger.error(error)
   }
 }

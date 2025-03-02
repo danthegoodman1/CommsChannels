@@ -141,6 +141,7 @@ async function handleUserLeftChannel(state: VoiceState) {
       logger.info(`Deleted empty voice channel ${channel.name}`)
     }
   } catch (error) {
-    logger.error(`Failed to delete voice channel: ${error}`)
+    logger.error("Failed to delete voice channel:")
+    logger.error(error)
   }
 }

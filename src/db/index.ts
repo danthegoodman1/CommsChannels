@@ -196,7 +196,8 @@ export async function createOrUpdateCreationChannel(
         }
       }
     } catch (error) {
-      logger.error(`Failed to update Discord channel properties: ${error}`)
+      logger.error("Failed to update Discord channel properties:")
+      logger.error(error)
       // Continue anyway since we've updated the database
     }
 
@@ -281,7 +282,8 @@ export async function createOrUpdateCreationChannel(
       }
     } catch (error) {
       if (!String(error).includes("Missing permissions")) {
-        logger.error(`Error creating voice channel: ${error}`)
+        logger.error("Error creating voice channel:")
+        logger.error(error)
       }
       throw error
     }

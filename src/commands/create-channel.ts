@@ -84,7 +84,8 @@ export const createChannelCommand = {
         } in guild ${guildId}`
       )
     } catch (error) {
-      logger.error(`Error creating/updating creation channel: ${error}`)
+      logger.error("Error creating/updating creation channel:")
+      logger.error(error)
 
       let errorMessage =
         "There was an error creating the creation channel. Please try again later."

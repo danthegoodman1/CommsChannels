@@ -47,7 +47,8 @@ async function main() {
     // Login to Discord
     await client.login(TOKEN)
   } catch (error) {
-    logger.error(`Failed to start the bot: ${error}`)
+    logger.error("Failed to start the bot:")
+    logger.error(error)
     process.exit(1)
   }
 }
@@ -58,7 +59,8 @@ client.on(
     try {
       await handleVoiceStateUpdate(oldState, newState)
     } catch (error) {
-      logger.error(`Error handling voice state update: ${error}`)
+      logger.error("Error handling voice state update:")
+      logger.error(error)
     }
   }
 )
@@ -83,7 +85,8 @@ client.on(Events.ChannelDelete, async (channel) => {
       )
     }
   } catch (creationError) {
-    logger.error(`Error handling creation channel deletion: ${creationError}`)
+    logger.error("Error handling creation channel deletion:")
+    logger.error(creationError)
     // Continue to the next check even if this one failed
   }
 
@@ -98,7 +101,8 @@ client.on(Events.ChannelDelete, async (channel) => {
       )
     }
   } catch (createdError) {
-    logger.error(`Error handling created channel deletion: ${createdError}`)
+    logger.error("Error handling created channel deletion:")
+    logger.error(createdError)
   }
 })
 
@@ -112,15 +116,18 @@ client.once(Events.ClientReady, async () => {
 
 // Error handling
 client.on("error", (error) => {
-  logger.error(`Discord client error: ${error}`)
+  logger.error("Discord client error:")
+  logger.error(error)
 })
 
 process.on("uncaughtException", (error) => {
-  logger.error(`Uncaught exception: ${error}`)
+  logger.error("Uncaught exception:")
+  logger.error(error)
 })
 
 process.on("unhandledRejection", (reason) => {
-  logger.error(`Unhandled rejection: ${reason}`)
+  logger.error("Unhandled rejection:")
+  logger.error(reason)
 })
 
 // Start the bot
