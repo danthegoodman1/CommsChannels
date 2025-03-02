@@ -99,3 +99,9 @@ To remove a creation channel, simply delete the voice channel in your server. Th
 ## Support
 
 If you encounter any issues or have questions about the bot, create a Github Issue at https://github.com/danthegoodman1/CommsChannels
+
+## AI Involvement
+
+This code was 99% created by Claude 3.7 Thinking in Cursor with Agent mode.
+
+It was told to implement [AGENT.md](/AGENT.md), and iterated a few times for behavior. Sometimes I nudged a few lines of code around.
