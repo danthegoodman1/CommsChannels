@@ -22,11 +22,25 @@ A Discord bot that allows users to dynamically create their own voice channels w
 
 ## Installation
 
-1. [Click here to invite the bot to your server](https://discord.com/oauth2/authorize?client_id=1345860342349037568&permissions=16778256&integration_type=0&scope=bot)
+### Official hosted Bot
+
+1. [Click here to invite the offically hosted bot to your server](https://discord.com/oauth2/authorize?client_id=1345860342349037568&permissions=16778256&integration_type=0&scope=bot)
 2. Make sure the bot has the following permissions:
    - Manage Channels
-   - Move Members
-   - Connect to Voice Channels
+   - View Channels
+   - Move Member
+
+### Self-hosting
+
+You'll need to create a discord bot at https://discord.com/developers/applications and get the
+
+To generate an invite link, go to the OAuth2 tab and select the `bot` scope under `OAuth2 URL Generator`.
+
+Then under the new `BOT PERMISSIONS` checkbox menu that pops up, select:
+
+- Manage Channels
+- View Channels
+- Move Member
 
 ## Commands
 
@@ -48,13 +62,6 @@ The command will create a new voice channel with the specified settings. When us
 
 To remove a creation channel, simply delete the voice channel in your server. The bot will automatically detect this and remove it from its system.
 
-## Example Setup
-
-1. Use the command: `/createcommschannel name:Create a Room`
-2. A new voice channel named "Create a Room" will be created
-3. Now when users join "Create a Room", they'll automatically get their own voice channel
-4. To remove it, just delete the channel through Discord's normal interface
-
 ## Support
 
-If you encounter any issues or have questions about the bot, please contact the bot owner or report issues on the support server.
+If you encounter any issues or have questions about the bot, create a Github Issue at https://github.com/danthegoodman1/CommsChannels

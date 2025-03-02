@@ -81,9 +81,6 @@ async function handleUserJoinedChannel(state: VoiceState) {
             id: state.member!.id,
             allow: [
               PermissionsBitField.Flags.ManageChannels, // Allows the user to rename the channel
-              PermissionsBitField.Flags.MuteMembers,
-              PermissionsBitField.Flags.DeafenMembers,
-              PermissionsBitField.Flags.MoveMembers,
             ],
           },
         ],
