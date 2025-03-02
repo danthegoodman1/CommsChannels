@@ -90,6 +90,8 @@ Use the `/createcommschannel` command, which takes the following parameters:
 
 The command will create a new voice channel with the specified settings. When users join this channel, they will automatically get their own voice channel.
 
+When the last user in the dynamically creates channel leaves, it will delete the channel.
+
 ### Managing Channel Creators
 
 To remove a creation channel, simply delete the voice channel in your server. The bot will automatically detect this and remove it from its system.
