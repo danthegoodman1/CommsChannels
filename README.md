@@ -1,4 +1,4 @@
-# Discord Dynamic Voice Channel Bot
+# CommasChannels - Discord Dynamic Voice Channel Bot
 
 A Discord bot that allows users to dynamically create their own voice channels without needing channel creation permissions.
 
