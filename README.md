@@ -32,6 +32,10 @@ A Discord bot that allows users to dynamically create their own voice channels w
 
 ### Self-hosting
 
+This bot is written with NodeJS v20, you can google how to install that.
+
+The provided Dockerfile works as well.
+
 #### Creating a Discord Bot
 
 1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)

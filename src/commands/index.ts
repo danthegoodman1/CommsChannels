@@ -13,15 +13,6 @@ export async function registerCommands(client: Client, clientId: string) {
   try {
     logger.info("Started refreshing application (/) commands.")
 
-    const rest = new REST().setToken(process.env.DISCORD_BOT_TOKEN!)
-
-    // Register commands globally
-    const commandsData = commands.map((command) => command.data.toJSON())
-
-    await rest.put(Routes.applicationCommands(clientId), { body: commandsData })
-
-    logger.info("Successfully reloaded application (/) commands.")
-
     // Set up command handlers
     client.on("interactionCreate", async (interaction) => {
       if (!interaction.isChatInputCommand()) return
@@ -54,6 +45,14 @@ export async function registerCommands(client: Client, clientId: string) {
         }
       }
     })
+
+    const rest = new REST().setToken(process.env.DISCORD_BOT_TOKEN!)
+
+    await rest.put(Routes.applicationCommands(clientId), {
+      body: commands.map((command) => command.data.toJSON()),
+    })
+
+    logger.info("Successfully reloaded application (/) commands.")
   } catch (error) {
     logger.error("Error registering application commands:")
     logger.error(error)
