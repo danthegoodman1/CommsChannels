@@ -20,12 +20,12 @@ import { handleVoiceStateUpdate } from "./voice-handlers.js"
 import { registerCommands } from "./commands/index.js"
 
 // Environment variables
-const TOKEN = process.env.DISCORD_TOKEN
-const CLIENT_ID = process.env.CLIENT_ID
+const TOKEN = process.env.DISCORD_BOT_TOKEN
+const CLIENT_ID = process.env.DISCORD_APPLICATION_ID
 
 if (!TOKEN || !CLIENT_ID) {
   logger.error(
-    "Missing required environment variables: DISCORD_TOKEN and/or CLIENT_ID"
+    "Missing required environment variables: DISCORD_BOT_TOKEN and/or DISCORD_APPLICATION_ID"
   )
   process.exit(1)
 }

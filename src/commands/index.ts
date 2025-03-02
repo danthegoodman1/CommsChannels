@@ -13,7 +13,7 @@ export async function registerCommands(client: Client, clientId: string) {
   try {
     logger.info("Started refreshing application (/) commands.")
 
-    const rest = new REST().setToken(process.env.DISCORD_TOKEN!)
+    const rest = new REST().setToken(process.env.DISCORD_BOT_TOKEN!)
 
     // Register commands globally
     const commandsData = commands.map((command) => command.data.toJSON())

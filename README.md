@@ -32,15 +32,49 @@ A Discord bot that allows users to dynamically create their own voice channels w
 
 ### Self-hosting
 
-You'll need to create a discord bot at https://discord.com/developers/applications and get the
+#### Creating a Discord Bot
 
-To generate an invite link, go to the OAuth2 tab and select the `bot` scope under `OAuth2 URL Generator`.
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+2. Click "New Application" and give it a name
+3. Under the "Bot" tab:
+   - Copy the "TOKEN" (you may need to click "Reset Token" first)
+4. Go to the "General Information" tab and copy the "APPLICATION ID"
+5. Generate an invite link from the OAuth2 tab:
+   - Select the "bot" scope
+   - Select these permissions: "Manage Channels", "View Channels", and "Move Member"
+   - Use the generated URL to invite the bot to your server
 
-Then under the new `BOT PERMISSIONS` checkbox menu that pops up, select:
+#### Environment Setup
 
-- Manage Channels
-- View Channels
-- Move Member
+1. Clone this repository
+2. Install dependencies:
+   ```
+   npm install
+   ```
+3. Create a `.env` file in the root directory with the following variables:
+   ```
+   # Discord Bot Configuration
+   DISCORD_BOT_TOKEN=your_discord_bot_token
+   DISCORD_APPLICATION_ID=your_application_id
+   ```
+   Replace `your_discord_bot_token` and `your_application_id` with the values you copied from the Discord Developer Portal.
+
+#### Running the Bot
+
+**Development Mode** (with hot reloading):
+
+```
+npm run dev
+```
+
+**Production Mode**:
+
+```
+npm run build
+npm start
+```
+
+The bot should now be running and will respond to the commands listed below.
 
 ## Commands
 
