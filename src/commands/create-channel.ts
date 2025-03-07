@@ -40,6 +40,14 @@ export const createChannelCommand = {
         .setRequired(false)
         .setMinValue(1)
         .setMaxValue(99)
+    )
+    .addRoleOption((option) =>
+      option
+        .setName("joinrole")
+        .setDescription(
+          "The minimum role required to join created channels (leave empty for @everyone)"
+        )
+        .setRequired(false)
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
@@ -57,6 +65,7 @@ export const createChannelCommand = {
       const guildId = interaction.guildId!
       const channelName = interaction.options.getString("name")!
       const role = interaction.options.getRole("role")
+      const joinRole = interaction.options.getRole("joinrole")
       const userLimit = interaction.options.getInteger("limit")
 
       // Create a new creation channel
@@ -64,6 +73,7 @@ export const createChannelCommand = {
         guildId,
         channelName,
         role ? role.id : null,
+        joinRole ? joinRole.id : null,
         userLimit
       )
 
@@ -72,7 +82,12 @@ export const createChannelCommand = {
           creationChannel ? "updated" : "created"
         } successfully!\n` +
           `Name: **${channelName}**\n` +
-          `Required role: ${role ? `**${role.name}**` : "**@everyone**"}\n` +
+          `Required role to create: ${
+            role ? `**${role.name}**` : "**@everyone**"
+          }\n` +
+          `Required role to join: ${
+            joinRole ? `**${joinRole.name}**` : "**@everyone**"
+          }\n` +
           `User limit for new channels: ${
             userLimit ? `**${userLimit}**` : "**No limit**"
           }`

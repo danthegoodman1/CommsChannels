@@ -39,6 +39,7 @@ export async function initializeDatabase() {
         guild_id TEXT NOT NULL,
         name TEXT NOT NULL,
         required_role_id TEXT,
+        join_role_id TEXT,
         user_limit INTEGER,
         created_at BIGINT NOT NULL,
         updated_at BIGINT NOT NULL
@@ -95,15 +96,16 @@ export async function createCreationChannel(
   guildId: string,
   name: string,
   requiredRoleId: string | null,
+  joinRoleId: string | null,
   userLimit: number | null
 ) {
   const now = Date.now()
   await pool.query(
     `
-    INSERT INTO creation_channels (id, guild_id, name, required_role_id, user_limit, created_at, updated_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    INSERT INTO creation_channels (id, guild_id, name, required_role_id, join_role_id, user_limit, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     `,
-    [channelId, guildId, name, requiredRoleId, userLimit, now, now]
+    [channelId, guildId, name, requiredRoleId, joinRoleId, userLimit, now, now]
   )
 }
 
@@ -111,16 +113,15 @@ export async function updateCreationChannel(
   channelId: string,
   name: string,
   requiredRoleId: string | null,
+  joinRoleId: string | null,
   userLimit: number | null
 ) {
   const now = Date.now()
   await pool.query(
-    `
-    UPDATE creation_channels 
-    SET name = $1, required_role_id = $2, user_limit = $3, updated_at = $4
-    WHERE id = $5
-    `,
-    [name, requiredRoleId, userLimit, now, channelId]
+    `UPDATE creation_channels 
+     SET name = $1, required_role_id = $2, join_role_id = $3, user_limit = $4, updated_at = $5
+     WHERE id = $6`,
+    [name, requiredRoleId, joinRoleId, userLimit, now, channelId]
   )
 }
 
@@ -165,6 +166,7 @@ export async function createOrUpdateCreationChannel(
   guildId: string,
   name: string,
   requiredRoleId: string | null | undefined,
+  joinRoleId: string | null | undefined,
   userLimit: number | null
 ) {
   // Check if a creation channel with this name already exists in the guild
@@ -177,6 +179,7 @@ export async function createOrUpdateCreationChannel(
       existingChannel.id,
       name,
       requiredRoleId ?? null,
+      joinRoleId ?? null,
       userLimit
     )
 
@@ -285,6 +288,7 @@ export async function createOrUpdateCreationChannel(
           guildId,
           name,
           requiredRoleId ?? null,
+          joinRoleId ?? null,
           userLimit
         )
 
@@ -293,6 +297,7 @@ export async function createOrUpdateCreationChannel(
           guild_id: guildId,
           name,
           required_role_id: requiredRoleId,
+          join_role_id: joinRoleId,
           user_limit: userLimit,
           created_at: Date.now(),
           updated_at: Date.now(),

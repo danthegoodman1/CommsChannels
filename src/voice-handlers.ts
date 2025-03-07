@@ -86,6 +86,34 @@ async function handleUserJoinedChannel(state: VoiceState) {
         ],
       })
 
+      // Apply join role permissions if specified
+      if (creationChannel.join_role_id) {
+        await newChannel.permissionOverwrites.create(guild.roles.everyone, {
+          Connect: false,
+        })
+
+        await newChannel.permissionOverwrites.create(
+          creationChannel.join_role_id,
+          {
+            Connect: true,
+          }
+        )
+
+        // Make sure the creator can still connect
+        await newChannel.permissionOverwrites.create(state.member!.id, {
+          Connect: true,
+          ManageChannels: true,
+        })
+
+        // Ensure the bot can connect and manage the channel
+        if (guild.members.me) {
+          await newChannel.permissionOverwrites.create(guild.members.me.id, {
+            Connect: true,
+            ManageChannels: true,
+          })
+        }
+      }
+
       // Move the user to the new channel
       await state.setChannel(newChannel)
 
