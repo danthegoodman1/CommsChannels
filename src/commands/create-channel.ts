@@ -82,12 +82,13 @@ export const createChannelCommand = {
           creationChannel ? "updated" : "created"
         } successfully!\n` +
           `Name: **${channelName}**\n` +
-          `Required role to create: ${
-            role ? `**${role.name}**` : "**@everyone**"
-          }\n` +
-          `Required role to join: ${
-            joinRole ? `**${joinRole.name}**` : "**@everyone**"
-          }\n` +
+          `${
+            joinRole
+              ? `Required role to join/create: **${joinRole.name}**\n`
+              : `Required role to create: ${
+                  role ? `**${role.name}**` : "**@everyone**"
+                }\n`
+          }` +
           `User limit for new channels: ${
             userLimit ? `**${userLimit}**` : "**No limit**"
           }`

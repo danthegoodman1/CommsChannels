@@ -4,6 +4,7 @@ import {
   VoiceState,
   PermissionsBitField,
   GuildMember,
+  OverwriteResolvable,
 } from "discord.js"
 import { logger } from "./logger/index.js"
 import {
@@ -51,6 +52,7 @@ async function handleUserJoinedChannel(state: VoiceState) {
 
   // We no longer need to check for roles since Discord will handle permissions
   // Users without the required role won't be able to join the channel
+  // If a join role is specified, it also controls access to the creation channel
 
   try {
     // Create a new voice channel for the user
@@ -71,48 +73,49 @@ async function handleUserJoinedChannel(state: VoiceState) {
     const parentId = state.channel?.parent?.id
 
     try {
+      // Set up basic permission overwrites for the creator
+      const permissionOverwrites: OverwriteResolvable[] = [
+        {
+          id: state.member!.id,
+          allow: [
+            PermissionsBitField.Flags.ManageChannels, // Allows the user to rename the channel
+          ],
+        },
+      ]
+
+      // If join role is specified, simply apply it - let Discord handle permissions
+      if (creationChannel.join_role_id) {
+        // Deny @everyone
+        permissionOverwrites.push({
+          id: guild.roles.everyone.id,
+          deny: [PermissionsBitField.Flags.Connect],
+        })
+
+        // Allow the specified role
+        permissionOverwrites.push({
+          id: creationChannel.join_role_id,
+          allow: [PermissionsBitField.Flags.Connect],
+        })
+      }
+
+      // Always ensure the bot can manage the channel
+      if (guild.members.me) {
+        permissionOverwrites.push({
+          id: guild.members.me.id,
+          allow: [
+            PermissionsBitField.Flags.Connect,
+            PermissionsBitField.Flags.ManageChannels,
+          ],
+        })
+      }
+
       const newChannel = await guild.channels.create({
         name: `${username}'s channel`,
         type: ChannelType.GuildVoice,
         parent: parentId,
         userLimit: creationChannel.user_limit || undefined,
-        permissionOverwrites: [
-          {
-            id: state.member!.id,
-            allow: [
-              PermissionsBitField.Flags.ManageChannels, // Allows the user to rename the channel
-            ],
-          },
-        ],
+        permissionOverwrites,
       })
-
-      // Apply join role permissions if specified
-      if (creationChannel.join_role_id) {
-        await newChannel.permissionOverwrites.create(guild.roles.everyone, {
-          Connect: false,
-        })
-
-        await newChannel.permissionOverwrites.create(
-          creationChannel.join_role_id,
-          {
-            Connect: true,
-          }
-        )
-
-        // Make sure the creator can still connect
-        await newChannel.permissionOverwrites.create(state.member!.id, {
-          Connect: true,
-          ManageChannels: true,
-        })
-
-        // Ensure the bot can connect and manage the channel
-        if (guild.members.me) {
-          await newChannel.permissionOverwrites.create(guild.members.me.id, {
-            Connect: true,
-            ManageChannels: true,
-          })
-        }
-      }
 
       // Move the user to the new channel
       await state.setChannel(newChannel)
@@ -129,7 +132,7 @@ async function handleUserJoinedChannel(state: VoiceState) {
 
       if (errorMessage.includes("Missing Permissions")) {
         logger.error(
-          `Missing permissions to create voice channel in guild ${guild.id}. Check both global and category-specific permissions.`
+          `Missing permissions to create voice channel in guild ${guild.id}. Check bot permissions.`
         )
       } else {
         logger.error(

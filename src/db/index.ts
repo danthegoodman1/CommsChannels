@@ -194,18 +194,22 @@ export async function createOrUpdateCreationChannel(
         await channel.setUserLimit(userLimit ?? 0) // 0 means unlimited
 
         // Update permissions if a role is specified
-        if (requiredRoleId) {
+        if (requiredRoleId || joinRoleId) {
           // Set up permissions - deny Connect for @everyone, allow for the specific role
           const permissionOverwrites: OverwriteResolvable[] = [
             {
               id: guild.roles.everyone.id,
               deny: [PermissionsBitField.Flags.Connect],
             },
-            {
-              id: requiredRoleId,
-              allow: [PermissionsBitField.Flags.Connect],
-            },
           ]
+
+          // If joinRoleId is specified, it overrides requiredRoleId for connection permissions
+          const roleToUse = joinRoleId || requiredRoleId
+
+          permissionOverwrites.push({
+            id: roleToUse!,
+            allow: [PermissionsBitField.Flags.Connect],
+          })
 
           // Don't forget to allow the bot to connect
           if (guild.members.me) {
@@ -249,17 +253,21 @@ export async function createOrUpdateCreationChannel(
       // Set up permission overwrites if a role is specified
       let permissionOverwrites: OverwriteResolvable[] = []
 
-      if (requiredRoleId) {
+      if (requiredRoleId || joinRoleId) {
         permissionOverwrites = [
           {
             id: guild.roles.everyone.id,
             deny: [PermissionsBitField.Flags.Connect],
           },
-          {
-            id: requiredRoleId,
-            allow: [PermissionsBitField.Flags.Connect],
-          },
         ]
+
+        // If joinRoleId is specified, it overrides requiredRoleId for connection permissions
+        const roleToUse = joinRoleId || requiredRoleId
+
+        permissionOverwrites.push({
+          id: roleToUse!,
+          allow: [PermissionsBitField.Flags.Connect],
+        })
 
         // Don't forget to allow the bot to connect
         if (guild.members.me) {

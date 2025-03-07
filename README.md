@@ -105,6 +105,7 @@ Use the `/createcommschannel` command, which takes the following parameters:
 - **name** (required): The name for the creation channel
 - **role** (optional): The minimum role required to create a channel (defaults to @everyone)
 - **limit** (optional): The maximum number of users allowed in created channels (will apply to both created channels and the creation channel itself)
+- **joinrole** (optional): The minimum role to be able to create a channel, and to join the created channels (overrides `role` if provided)
 
 The command will create a new voice channel with the specified settings. When users join this channel, they will automatically get their own voice channel.
 
