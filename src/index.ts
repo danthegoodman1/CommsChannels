@@ -42,7 +42,7 @@ export const client = new Client({
 async function main() {
   try {
     // Initialize database
-    initializeDatabase()
+    await initializeDatabase()
 
     // Login to Discord
     await client.login(TOKEN)
@@ -76,10 +76,10 @@ client.on(Events.ChannelDelete, async (channel) => {
 
   // First check if this was a creation channel
   try {
-    const creationChannel = getCreationChannelById(channelId)
+    const creationChannel = await getCreationChannelById(channelId)
     if (creationChannel) {
       // This was a creation channel, remove it from the database
-      deleteCreationChannel(channelId)
+      await deleteCreationChannel(channelId)
       logger.info(
         `Removed creation channel ${channelName} (${channelId}) from database after Discord channel deletion`
       )
@@ -92,10 +92,10 @@ client.on(Events.ChannelDelete, async (channel) => {
 
   // Then check if it was a created voice channel
   try {
-    const createdChannel = getCreatedVoiceChannel(channelId)
+    const createdChannel = await getCreatedVoiceChannel(channelId)
     if (createdChannel) {
       // This was a dynamically created channel, remove it from tracking
-      deleteCreatedVoiceChannel(channelId)
+      await deleteCreatedVoiceChannel(channelId)
       logger.info(
         `Removed created channel ${channelName} (${channelId}) from tracking after Discord channel deletion`
       )

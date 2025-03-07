@@ -56,12 +56,26 @@ The provided Dockerfile works as well.
    npm install
    ```
 3. Create a `.env` file in the root directory with the following variables:
+
    ```
    # Discord Bot Configuration
    DISCORD_BOT_TOKEN=your_discord_bot_token
    DISCORD_APPLICATION_ID=your_application_id
+
+   # PostgreSQL Database Configuration
+   PG_DSN=postgresql://username:password@hostname:5432/database_name
    ```
+
    Replace `your_discord_bot_token` and `your_application_id` with the values you copied from the Discord Developer Portal.
+   Also replace the PostgreSQL connection string with your database credentials.
+
+#### Database Setup
+
+The bot requires a PostgreSQL database. You can set one up locally or use a hosted PostgreSQL service.
+
+1. Create a PostgreSQL database for the bot
+2. Add the connection string to the `.env` file as shown above
+3. The bot will automatically create the necessary tables when it starts
 
 #### Running the Bot
 

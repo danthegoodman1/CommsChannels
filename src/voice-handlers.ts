@@ -42,7 +42,7 @@ export async function handleVoiceStateUpdate(
  */
 async function handleUserJoinedChannel(state: VoiceState) {
   // Check if this is a creation channel
-  const creationChannel = getCreationChannelById(state.channelId!)
+  const creationChannel = await getCreationChannelById(state.channelId!)
   if (!creationChannel) return
 
   logger.info(
@@ -90,7 +90,7 @@ async function handleUserJoinedChannel(state: VoiceState) {
       await state.setChannel(newChannel)
 
       // Track the created channel in the database
-      trackCreatedVoiceChannel(newChannel.id, guild.id, state.member!.id)
+      await trackCreatedVoiceChannel(newChannel.id, guild.id, state.member!.id)
 
       logger.info(
         `Created voice channel ${newChannel.name} for user ${state.member?.user.tag}`
@@ -123,7 +123,7 @@ async function handleUserJoinedChannel(state: VoiceState) {
  */
 async function handleUserLeftChannel(state: VoiceState) {
   // Check if this is a dynamically created channel
-  const createdChannel = getCreatedVoiceChannel(state.channelId!)
+  const createdChannel = await getCreatedVoiceChannel(state.channelId!)
   if (!createdChannel) return
 
   const channel = state.channel
@@ -136,7 +136,7 @@ async function handleUserLeftChannel(state: VoiceState) {
   try {
     // No members left in the channel, delete it
     if (channel) {
-      deleteCreatedVoiceChannel(state.channelId!)
+      await deleteCreatedVoiceChannel(state.channelId!)
       await channel.delete(`Last user left the dynamically created channel`)
       logger.info(`Deleted empty voice channel ${channel.name}`)
     }

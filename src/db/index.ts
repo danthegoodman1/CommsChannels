@@ -1,77 +1,96 @@
-import Database from "better-sqlite3"
+import pkg, { PoolClient } from "pg"
+const { Pool } = pkg
 import { logger } from "../logger/index.js"
-import path from "path"
-import { fileURLToPath } from "url"
 import { CreationChannel, CreatedVoiceChannel } from "./types.js"
-import fs from "fs"
 import {
   ChannelType,
   PermissionsBitField,
   OverwriteResolvable,
 } from "discord.js"
 
-// Get the directory name of the current module
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+// Initialize PostgreSQL connection pool
+export const pool = new Pool({
+  connectionString: process.env.PG_DSN,
+  // Optional: Configure pool settings
+  max: 20, // maximum number of clients in the pool
+  idleTimeoutMillis: 30000, // how long a client is allowed to remain idle before being closed
+  connectionTimeoutMillis: 2000, // how long to wait for a connection
+})
 
-// Database path
-const dbDir = path.join(__dirname, "../../data")
-const dbPath = path.join(dbDir, "database.sqlite")
-
-// Ensure the data directory exists
-if (!fs.existsSync(dbDir)) {
-  logger.info(`Creating data directory at ${dbDir}`)
-  fs.mkdirSync(dbDir, { recursive: true })
-}
-
-// Initialize the database
-export const db = new Database(dbPath)
+// Ensure the pool logs errors
+pool.on("error", (err) => {
+  logger.error("Unexpected error on idle PostgreSQL client", err)
+  process.exit(-1)
+})
 
 // Ensure the tables exist
-export function initializeDatabase() {
+export async function initializeDatabase() {
   logger.info("Initializing database...")
+  const client = await pool.connect()
 
-  // Creation channels table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS creation_channels (
-      id TEXT PRIMARY KEY,
-      guild_id TEXT NOT NULL,
-      name TEXT NOT NULL,
-      required_role_id TEXT,
-      user_limit INTEGER,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    )
-  `)
+  try {
+    // Start a transaction
+    await client.query("BEGIN")
 
-  // Created voice channels table (for tracking channels created by users)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS created_voice_channels (
-      id TEXT PRIMARY KEY,
-      guild_id TEXT NOT NULL,
-      creator_id TEXT NOT NULL,
-      created_at INTEGER NOT NULL
-    )
-  `)
+    // Creation channels table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS creation_channels (
+        id TEXT PRIMARY KEY,
+        guild_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        required_role_id TEXT,
+        user_limit INTEGER,
+        created_at BIGINT NOT NULL,
+        updated_at BIGINT NOT NULL
+      )
+    `)
 
-  logger.info("Database initialization complete")
+    // Created voice channels table (for tracking channels created by users)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS created_voice_channels (
+        id TEXT PRIMARY KEY,
+        guild_id TEXT NOT NULL,
+        creator_id TEXT NOT NULL,
+        created_at BIGINT NOT NULL
+      )
+    `)
+
+    // Commit the transaction
+    await client.query("COMMIT")
+    logger.info("Database initialization complete")
+  } catch (error) {
+    // If anything fails, roll back the transaction
+    await client.query("ROLLBACK")
+    logger.error("Database initialization failed:", error)
+    throw error
+  } finally {
+    // Release the client back to the pool
+    client.release()
+  }
 }
 
 // Creation channels operations
-export function getCreationChannels(guildId: string): CreationChannel[] {
-  return db
-    .prepare("SELECT * FROM creation_channels WHERE guild_id = ?")
-    .all(guildId) as CreationChannel[]
+export async function getCreationChannels(
+  guildId: string
+): Promise<CreationChannel[]> {
+  const result = await pool.query(
+    "SELECT * FROM creation_channels WHERE guild_id = $1",
+    [guildId]
+  )
+  return result.rows
 }
 
-export function getCreationChannelById(
+export async function getCreationChannelById(
   channelId: string
-): CreationChannel | undefined {
-  return db
-    .prepare("SELECT * FROM creation_channels WHERE id = ?")
-    .get(channelId) as CreationChannel | undefined
+): Promise<CreationChannel | undefined> {
+  const result = await pool.query(
+    "SELECT * FROM creation_channels WHERE id = $1",
+    [channelId]
+  )
+  return result.rows.length > 0 ? result.rows[0] : undefined
 }
 
-export function createCreationChannel(
+export async function createCreationChannel(
   channelId: string,
   guildId: string,
   name: string,
@@ -79,59 +98,66 @@ export function createCreationChannel(
   userLimit: number | null
 ) {
   const now = Date.now()
-  db.prepare(
+  await pool.query(
     `
     INSERT INTO creation_channels (id, guild_id, name, required_role_id, user_limit, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `
-  ).run(channelId, guildId, name, requiredRoleId, userLimit, now, now)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `,
+    [channelId, guildId, name, requiredRoleId, userLimit, now, now]
+  )
 }
 
-export function updateCreationChannel(
+export async function updateCreationChannel(
   channelId: string,
   name: string,
   requiredRoleId: string | null,
   userLimit: number | null
 ) {
   const now = Date.now()
-  db.prepare(
+  await pool.query(
     `
     UPDATE creation_channels 
-    SET name = ?, required_role_id = ?, user_limit = ?, updated_at = ?
-    WHERE id = ?
-  `
-  ).run(name, requiredRoleId, userLimit, now, channelId)
+    SET name = $1, required_role_id = $2, user_limit = $3, updated_at = $4
+    WHERE id = $5
+    `,
+    [name, requiredRoleId, userLimit, now, channelId]
+  )
 }
 
-export function deleteCreationChannel(channelId: string) {
-  db.prepare("DELETE FROM creation_channels WHERE id = ?").run(channelId)
+export async function deleteCreationChannel(channelId: string) {
+  await pool.query("DELETE FROM creation_channels WHERE id = $1", [channelId])
 }
 
 // Created voice channels operations
-export function trackCreatedVoiceChannel(
+export async function trackCreatedVoiceChannel(
   channelId: string,
   guildId: string,
   creatorId: string
 ) {
   const now = Date.now()
-  db.prepare(
+  await pool.query(
     `
     INSERT INTO created_voice_channels (id, guild_id, creator_id, created_at)
-    VALUES (?, ?, ?, ?)
-  `
-  ).run(channelId, guildId, creatorId, now)
+    VALUES ($1, $2, $3, $4)
+    `,
+    [channelId, guildId, creatorId, now]
+  )
 }
 
-export function getCreatedVoiceChannel(
+export async function getCreatedVoiceChannel(
   channelId: string
-): CreatedVoiceChannel | undefined {
-  return db
-    .prepare("SELECT * FROM created_voice_channels WHERE id = ?")
-    .get(channelId) as CreatedVoiceChannel | undefined
+): Promise<CreatedVoiceChannel | undefined> {
+  const result = await pool.query(
+    "SELECT * FROM created_voice_channels WHERE id = $1",
+    [channelId]
+  )
+  return result.rows.length > 0 ? result.rows[0] : undefined
 }
 
-export function deleteCreatedVoiceChannel(channelId: string) {
-  db.prepare("DELETE FROM created_voice_channels WHERE id = ?").run(channelId)
+export async function deleteCreatedVoiceChannel(channelId: string) {
+  await pool.query("DELETE FROM created_voice_channels WHERE id = $1", [
+    channelId,
+  ])
 }
 
 // Helper function to create or update a creation channel without requiring a specific channel ID
@@ -142,12 +168,12 @@ export async function createOrUpdateCreationChannel(
   userLimit: number | null
 ) {
   // Check if a creation channel with this name already exists in the guild
-  const existingChannels = getCreationChannels(guildId)
+  const existingChannels = await getCreationChannels(guildId)
   const existingChannel = existingChannels.find((ch) => ch.name === name)
 
   if (existingChannel) {
     // Update the existing channel
-    updateCreationChannel(
+    await updateCreationChannel(
       existingChannel.id,
       name,
       requiredRoleId ?? null,
@@ -254,7 +280,7 @@ export async function createOrUpdateCreationChannel(
         })
 
         // Register it as a creation channel
-        createCreationChannel(
+        await createCreationChannel(
           newChannel.id,
           guildId,
           name,
