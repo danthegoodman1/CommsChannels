@@ -188,149 +188,22 @@ export async function createOrUpdateCreationChannel(
   const existingChannel = existingChannels.find((ch) => ch.name === name)
 
   if (existingChannel) {
-    // Update the existing channel
-    await updateCreationChannel(
-      existingChannel.id,
-      name,
-      requiredRoleId ?? null,
-      joinRoleId ?? null,
-      viewRoleId ?? null,
-      userLimit
-    )
-
-    // Also update the Discord channel properties (specifically user limit and permissions)
+    // Verify the channel still exists in Discord by checking its ID
     try {
       const guild = await (
         await import("../index.js")
       ).client.guilds.fetch(guildId)
       const channel = await guild.channels.fetch(existingChannel.id)
-      if (channel && channel.isVoiceBased()) {
-        // Update user limit
-        await channel.setUserLimit(userLimit ?? 0) // 0 means unlimited
 
-        // Update permissions if a role is specified
-        if (requiredRoleId || joinRoleId || viewRoleId) {
-          // Set up permissions - deny Connect for @everyone by default
-          const permissionOverwrites: OverwriteResolvable[] = [
-            {
-              id: guild.roles.everyone.id,
-              deny: [PermissionsBitField.Flags.Connect],
-            },
-          ]
-
-          // If joinRoleId is specified, it overrides requiredRoleId for connection permissions
-          const roleToUse = joinRoleId || requiredRoleId
-
-          if (roleToUse) {
-            permissionOverwrites.push({
-              id: roleToUse!,
-              allow: [PermissionsBitField.Flags.Connect],
-            })
-          }
-
-          // If viewRoleId is specified, allow viewing but deny connect
-          if (viewRoleId) {
-            permissionOverwrites.push({
-              id: viewRoleId!,
-              allow: [PermissionsBitField.Flags.ViewChannel],
-              deny: [PermissionsBitField.Flags.Connect],
-            })
-          }
-
-          // Don't forget to allow the bot to connect
-          if (guild.members.me) {
-            permissionOverwrites.push({
-              id: guild.members.me.id,
-              allow: [
-                PermissionsBitField.Flags.Connect,
-                PermissionsBitField.Flags.ManageChannels,
-              ],
-            })
-          }
-
-          await channel.permissionOverwrites.set(permissionOverwrites)
-        } else {
-          // If no role requirement, reset to default (everyone can connect)
-          await channel.permissionOverwrites.set([])
-        }
-      }
-    } catch (error) {
-      logger.error("Failed to update Discord channel properties:")
-      logger.error(error)
-      // Continue anyway since we've updated the database
-    }
-
-    return existingChannel
-  } else {
-    try {
-      // Create a new voice channel in Discord
-      const guild = await (
-        await import("../index.js")
-      ).client.guilds.fetch(guildId)
-
-      // Check if bot has necessary permissions
-      const botMember = guild.members.me
-      if (!botMember?.permissions.has("ManageChannels")) {
-        const errorMessage = `Bot doesn't have the ManageChannels permission in guild ${guildId}. Please update the bot's role permissions.`
-        logger.error(errorMessage)
-        throw new Error(errorMessage)
-      }
-
-      // Set up permission overwrites if a role is specified
-      let permissionOverwrites: OverwriteResolvable[] = []
-
-      if (requiredRoleId || joinRoleId || viewRoleId) {
-        permissionOverwrites = [
-          {
-            id: guild.roles.everyone.id,
-            deny: [PermissionsBitField.Flags.Connect],
-          },
-        ]
-
-        // If joinRoleId is specified, it overrides requiredRoleId for connection permissions
-        const roleToUse = joinRoleId || requiredRoleId
-
-        if (roleToUse) {
-          permissionOverwrites.push({
-            id: roleToUse!,
-            allow: [PermissionsBitField.Flags.Connect],
-          })
-        }
-
-        // If viewRoleId is specified, allow viewing but deny connect
-        if (viewRoleId) {
-          permissionOverwrites.push({
-            id: viewRoleId!,
-            allow: [PermissionsBitField.Flags.ViewChannel],
-            deny: [PermissionsBitField.Flags.Connect],
-          })
-        }
-
-        // Don't forget to allow the bot to connect
-        if (guild.members.me) {
-          permissionOverwrites.push({
-            id: guild.members.me.id,
-            allow: [
-              PermissionsBitField.Flags.Connect,
-              PermissionsBitField.Flags.ManageChannels,
-            ],
-          })
-        }
-      }
-
-      try {
-        const newChannel = await guild.channels.create({
-          name,
-          type: ChannelType.GuildVoice,
-          reason: "Creating comms channel creator",
-          userLimit: userLimit ?? 0, // 0 means unlimited
-          permissionOverwrites: permissionOverwrites,
-        })
-
-        // Register it as a creation channel
-        await createCreationChannel(
-          newChannel.id,
-          guildId,
+      // If channel doesn't exist in Discord, we'll create a new one below
+      if (!channel) {
+        logger.info(
+          `Creation channel ${existingChannel.id} no longer exists in Discord, will create new one`
+        )
+      } else {
+        // Channel exists, update it
+        await updateCreationChannel(
+          existingChannel.id,
           name,
           requiredRoleId ?? null,
           joinRoleId ?? null,
@@ -338,32 +211,171 @@ export async function createOrUpdateCreationChannel(
           userLimit
         )
 
-        return {
-          id: newChannel.id,
-          guild_id: guildId,
-          name,
-          required_role_id: requiredRoleId,
-          join_role_id: joinRoleId,
-          view_role_id: viewRoleId,
-          user_limit: userLimit,
-          created_at: Date.now(),
-          updated_at: Date.now(),
+        // Also update the Discord channel properties (specifically user limit and permissions)
+        if (channel.isVoiceBased()) {
+          // Update user limit
+          await channel.setUserLimit(userLimit ?? 0) // 0 means unlimited
+
+          // Update permissions if a role is specified
+          if (requiredRoleId || joinRoleId || viewRoleId) {
+            // Set up permissions - deny Connect for @everyone by default
+            const permissionOverwrites: OverwriteResolvable[] = [
+              {
+                id: guild.roles.everyone.id,
+                deny: [PermissionsBitField.Flags.Connect],
+              },
+            ]
+
+            // If joinRoleId is specified, it overrides requiredRoleId for connection permissions
+            const roleToUse = joinRoleId || requiredRoleId
+
+            if (roleToUse) {
+              permissionOverwrites.push({
+                id: roleToUse!,
+                allow: [PermissionsBitField.Flags.Connect],
+              })
+            }
+
+            // If viewRoleId is specified, allow viewing but deny connect
+            if (viewRoleId) {
+              permissionOverwrites.push({
+                id: viewRoleId!,
+                allow: [PermissionsBitField.Flags.ViewChannel],
+                deny: [PermissionsBitField.Flags.Connect],
+              })
+            }
+
+            // Don't forget to allow the bot to connect
+            if (guild.members.me) {
+              permissionOverwrites.push({
+                id: guild.members.me.id,
+                allow: [
+                  PermissionsBitField.Flags.Connect,
+                  PermissionsBitField.Flags.ManageChannels,
+                ],
+              })
+            }
+
+            await channel.permissionOverwrites.set(permissionOverwrites)
+          } else {
+            // If no role requirement, reset to default (everyone can connect)
+            await channel.permissionOverwrites.set([])
+          }
         }
-      } catch (channelError) {
-        const errorStr = String(channelError)
-        if (errorStr.includes("Missing Permissions")) {
-          const errorMessage = `Missing permissions to create a voice channel. Make sure the bot has the "Manage Channels" permission and appropriate category permissions.`
-          logger.error(errorMessage)
-          throw new Error(errorMessage)
-        }
-        throw channelError
+
+        return existingChannel
       }
     } catch (error) {
-      if (!String(error).includes("Missing permissions")) {
-        logger.error("Error creating voice channel:")
-        logger.error(error)
-      }
-      throw error
+      logger.error("Failed to fetch or update Discord channel:")
+      logger.error(error)
+      // If the channel doesn't exist in Discord, we'll create a new one below
+      // Clean up the old database entry
+      await deleteCreationChannel(existingChannel.id)
+      logger.info(
+        `Cleaned up database entry for non-existent channel ${existingChannel.id}`
+      )
     }
+  }
+
+  // Create a new channel (either no existing channel or the old one doesn't exist in Discord)
+  try {
+    // Create a new voice channel in Discord
+    const guild = await (
+      await import("../index.js")
+    ).client.guilds.fetch(guildId)
+
+    // Check if bot has necessary permissions
+    const botMember = guild.members.me
+    if (!botMember?.permissions.has("ManageChannels")) {
+      const errorMessage = `Bot doesn't have the ManageChannels permission in guild ${guildId}. Please update the bot's role permissions.`
+      logger.error(errorMessage)
+      throw new Error(errorMessage)
+    }
+
+    // Set up permission overwrites if a role is specified
+    let permissionOverwrites: OverwriteResolvable[] = []
+
+    if (requiredRoleId || joinRoleId || viewRoleId) {
+      permissionOverwrites = [
+        {
+          id: guild.roles.everyone.id,
+          deny: [PermissionsBitField.Flags.Connect],
+        },
+      ]
+
+      // If joinRoleId is specified, it overrides requiredRoleId for connection permissions
+      const roleToUse = joinRoleId || requiredRoleId
+
+      if (roleToUse) {
+        permissionOverwrites.push({
+          id: roleToUse!,
+          allow: [PermissionsBitField.Flags.Connect],
+        })
+      }
+
+      // If viewRoleId is specified, allow viewing but deny connect
+      if (viewRoleId) {
+        permissionOverwrites.push({
+          id: viewRoleId!,
+          allow: [PermissionsBitField.Flags.ViewChannel],
+          deny: [PermissionsBitField.Flags.Connect],
+        })
+      }
+
+      // Don't forget to allow the bot to connect
+      if (guild.members.me) {
+        permissionOverwrites.push({
+          id: guild.members.me.id,
+          allow: [
+            PermissionsBitField.Flags.Connect,
+            PermissionsBitField.Flags.ManageChannels,
+          ],
+        })
+      }
+    }
+
+    const newChannel = await guild.channels.create({
+      name,
+      type: ChannelType.GuildVoice,
+      reason: "Creating comms channel creator",
+      userLimit: userLimit ?? 0, // 0 means unlimited
+      permissionOverwrites: permissionOverwrites,
+    })
+
+    // Register it as a creation channel
+    await createCreationChannel(
+      newChannel.id,
+      guildId,
+      name,
+      requiredRoleId ?? null,
+      joinRoleId ?? null,
+      viewRoleId ?? null,
+      userLimit
+    )
+
+    return {
+      id: newChannel.id,
+      guild_id: guildId,
+      name,
+      required_role_id: requiredRoleId,
+      join_role_id: joinRoleId,
+      view_role_id: viewRoleId,
+      user_limit: userLimit,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    }
+  } catch (error) {
+    const errorStr = String(error)
+    if (
+      errorStr.includes("Missing Permissions") ||
+      errorStr.includes("Missing permissions")
+    ) {
+      const errorMessage = `Missing permissions to create a voice channel. Make sure the bot has the "Manage Channels" permission and appropriate category permissions.`
+      logger.error(errorMessage)
+      throw new Error(errorMessage)
+    }
+    logger.error("Error creating voice channel:")
+    logger.error(error)
+    throw error
   }
 }
