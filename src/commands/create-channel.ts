@@ -2,13 +2,9 @@ import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   PermissionFlagsBits,
-  ChannelType,
 } from "discord.js"
 import { logger } from "../logger/index.js"
 import {
-  createCreationChannel,
-  updateCreationChannel,
-  getCreationChannelById,
   createOrUpdateCreationChannel,
 } from "../db/index.js"
 
