@@ -157,20 +157,38 @@ async function handleUserLeftChannel(state: VoiceState) {
   const createdChannel = await getCreatedVoiceChannel(state.channelId!)
   if (!createdChannel) return
 
-  const channel = state.channel
+  let channel = state.channel
+
+  // If the channel is not in cache (e.g., if it was renamed), fetch it
+  if (!channel) {
+    try {
+      const fetchedChannel = await state.guild.channels.fetch(state.channelId!)
+      if (!fetchedChannel || !fetchedChannel.isVoiceBased()) {
+        // Channel doesn't exist or is not a voice channel, clean up database
+        await deleteCreatedVoiceChannel(state.channelId!)
+        return
+      }
+      channel = fetchedChannel
+    } catch (error) {
+      // Channel no longer exists, clean up database
+      logger.info(
+        `Channel ${state.channelId} no longer exists, cleaning up database`
+      )
+      await deleteCreatedVoiceChannel(state.channelId!)
+      return
+    }
+  }
 
   // Don't delete the channel if there are still users in it
-  if (channel && channel.members.size > 0) {
+  if (channel.members.size > 0) {
     return
   }
 
   try {
     // No members left in the channel, delete it
-    if (channel) {
-      await deleteCreatedVoiceChannel(state.channelId!)
-      await channel.delete(`Last user left the dynamically created channel`)
-      logger.info(`Deleted empty voice channel ${channel.name}`)
-    }
+    await deleteCreatedVoiceChannel(state.channelId!)
+    await channel.delete(`Last user left the dynamically created channel`)
+    logger.info(`Deleted empty voice channel ${channel.name}`)
   } catch (error) {
     logger.error("Failed to delete voice channel:")
     logger.error(error)
