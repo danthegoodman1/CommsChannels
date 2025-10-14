@@ -19,6 +19,25 @@ import {
 const channelCounters = new Map<string, number>()
 
 /**
+ * Helper function to add permission overwrite if it doesn't exist
+ */
+function addPermissionIfNotExists(
+  overwrites: OverwriteResolvable[],
+  id: string,
+  allow?: bigint[],
+  deny?: bigint[]
+) {
+  const exists = overwrites.some((ow) => ow.id === id)
+  if (!exists) {
+    overwrites.push({
+      id,
+      ...(allow && { allow }),
+      ...(deny && { deny }),
+    })
+  }
+}
+
+/**
  * Handle voice state updates to create or delete dynamic voice channels
  */
 export async function handleVoiceStateUpdate(
@@ -84,49 +103,64 @@ async function handleUserJoinedChannel(state: VoiceState) {
     const channelName = `${creationChannel.name} ${newCount}`
 
     try {
-      // Set up basic permission overwrites for the creator
-      const permissionOverwrites: OverwriteResolvable[] = [
-        {
-          id: state.member!.id,
-          allow: [
-            PermissionsBitField.Flags.ManageChannels, // Allows the user to rename the channel
-          ],
-        },
-      ]
+      // Copy permission overwrites from the creation channel
+      const creationChannelDiscord = state.channel
+      const permissionOverwrites: OverwriteResolvable[] = []
 
-      // If join role is specified, simply apply it - let Discord handle permissions
+      // Inherit all existing permission overwrites from the creation channel
+      if (creationChannelDiscord?.permissionOverwrites) {
+        creationChannelDiscord.permissionOverwrites.cache.forEach(
+          (overwrite) => {
+            permissionOverwrites.push({
+              id: overwrite.id,
+              allow: overwrite.allow.bitfield,
+              deny: overwrite.deny.bitfield,
+            })
+          }
+        )
+      }
+
+      // Add supplemental role-based permissions from database settings
       if (creationChannel.join_role_id) {
-        // Deny @everyone
-        permissionOverwrites.push({
-          id: guild.roles.everyone.id,
-          deny: [PermissionsBitField.Flags.Connect],
-        })
-
-        // Allow the specified role
-        permissionOverwrites.push({
-          id: creationChannel.join_role_id,
-          allow: [PermissionsBitField.Flags.Connect],
-        })
+        addPermissionIfNotExists(
+          permissionOverwrites,
+          creationChannel.join_role_id,
+          [PermissionsBitField.Flags.Connect]
+        )
+        addPermissionIfNotExists(
+          permissionOverwrites,
+          guild.roles.everyone.id,
+          undefined,
+          [PermissionsBitField.Flags.Connect]
+        )
       }
 
-      // If view role is specified, allow viewing but deny connect
       if (creationChannel.view_role_id) {
-        permissionOverwrites.push({
-          id: creationChannel.view_role_id,
-          allow: [PermissionsBitField.Flags.ViewChannel],
-          deny: [PermissionsBitField.Flags.Connect],
-        })
+        addPermissionIfNotExists(
+          permissionOverwrites,
+          creationChannel.view_role_id,
+          [PermissionsBitField.Flags.ViewChannel],
+          [PermissionsBitField.Flags.Connect]
+        )
       }
 
-      // Always ensure the bot can manage the channel
+      // Ensure creator has manage permissions
+      addPermissionIfNotExists(
+        permissionOverwrites,
+        state.member!.id,
+        [PermissionsBitField.Flags.ManageChannels]
+      )
+
+      // Ensure bot can manage the channel
       if (guild.members.me) {
-        permissionOverwrites.push({
-          id: guild.members.me.id,
-          allow: [
+        addPermissionIfNotExists(
+          permissionOverwrites,
+          guild.members.me.id,
+          [
             PermissionsBitField.Flags.Connect,
             PermissionsBitField.Flags.ManageChannels,
-          ],
-        })
+          ]
+        )
       }
 
       const newChannel = await guild.channels.create({
