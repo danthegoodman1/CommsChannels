@@ -48,6 +48,14 @@ export const createChannelCommand = {
           "The minimum role required to join created channels (leave empty for @everyone)"
         )
         .setRequired(false)
+    )
+    .addRoleOption((option) =>
+      option
+        .setName("viewrole")
+        .setDescription(
+          "Role that can see the channel but not join (view-only)"
+        )
+        .setRequired(false)
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
@@ -66,6 +74,7 @@ export const createChannelCommand = {
       const channelName = interaction.options.getString("name")!
       const role = interaction.options.getRole("role")
       const joinRole = interaction.options.getRole("joinrole")
+      const viewRole = interaction.options.getRole("viewrole")
       const userLimit = interaction.options.getInteger("limit")
 
       // Create a new creation channel
@@ -74,6 +83,7 @@ export const createChannelCommand = {
         channelName,
         role ? role.id : null,
         joinRole ? joinRole.id : null,
+        viewRole ? viewRole.id : null,
         userLimit
       )
 
@@ -89,6 +99,7 @@ export const createChannelCommand = {
                   role ? `**${role.name}**` : "**@everyone**"
                 }\n`
           }` +
+          `${viewRole ? `View-only role: **${viewRole.name}**\n` : ""}` +
           `User limit for new channels: ${
             userLimit ? `**${userLimit}**` : "**No limit**"
           }`

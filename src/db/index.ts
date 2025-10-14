@@ -40,6 +40,7 @@ export async function initializeDatabase() {
         name TEXT NOT NULL,
         required_role_id TEXT,
         join_role_id TEXT,
+        view_role_id TEXT,
         user_limit INTEGER,
         created_at BIGINT NOT NULL,
         updated_at BIGINT NOT NULL
@@ -97,15 +98,26 @@ export async function createCreationChannel(
   name: string,
   requiredRoleId: string | null,
   joinRoleId: string | null,
+  viewRoleId: string | null,
   userLimit: number | null
 ) {
   const now = Date.now()
   await pool.query(
     `
-    INSERT INTO creation_channels (id, guild_id, name, required_role_id, join_role_id, user_limit, created_at, updated_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    INSERT INTO creation_channels (id, guild_id, name, required_role_id, join_role_id, view_role_id, user_limit, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     `,
-    [channelId, guildId, name, requiredRoleId, joinRoleId, userLimit, now, now]
+    [
+      channelId,
+      guildId,
+      name,
+      requiredRoleId,
+      joinRoleId,
+      viewRoleId,
+      userLimit,
+      now,
+      now,
+    ]
   )
 }
 
@@ -114,14 +126,15 @@ export async function updateCreationChannel(
   name: string,
   requiredRoleId: string | null,
   joinRoleId: string | null,
+  viewRoleId: string | null,
   userLimit: number | null
 ) {
   const now = Date.now()
   await pool.query(
     `UPDATE creation_channels 
-     SET name = $1, required_role_id = $2, join_role_id = $3, user_limit = $4, updated_at = $5
-     WHERE id = $6`,
-    [name, requiredRoleId, joinRoleId, userLimit, now, channelId]
+     SET name = $1, required_role_id = $2, join_role_id = $3, view_role_id = $4, user_limit = $5, updated_at = $6
+     WHERE id = $7`,
+    [name, requiredRoleId, joinRoleId, viewRoleId, userLimit, now, channelId]
   )
 }
 
@@ -167,6 +180,7 @@ export async function createOrUpdateCreationChannel(
   name: string,
   requiredRoleId: string | null | undefined,
   joinRoleId: string | null | undefined,
+  viewRoleId: string | null | undefined,
   userLimit: number | null
 ) {
   // Check if a creation channel with this name already exists in the guild
@@ -180,6 +194,7 @@ export async function createOrUpdateCreationChannel(
       name,
       requiredRoleId ?? null,
       joinRoleId ?? null,
+      viewRoleId ?? null,
       userLimit
     )
 
@@ -194,8 +209,8 @@ export async function createOrUpdateCreationChannel(
         await channel.setUserLimit(userLimit ?? 0) // 0 means unlimited
 
         // Update permissions if a role is specified
-        if (requiredRoleId || joinRoleId) {
-          // Set up permissions - deny Connect for @everyone, allow for the specific role
+        if (requiredRoleId || joinRoleId || viewRoleId) {
+          // Set up permissions - deny Connect for @everyone by default
           const permissionOverwrites: OverwriteResolvable[] = [
             {
               id: guild.roles.everyone.id,
@@ -206,10 +221,21 @@ export async function createOrUpdateCreationChannel(
           // If joinRoleId is specified, it overrides requiredRoleId for connection permissions
           const roleToUse = joinRoleId || requiredRoleId
 
-          permissionOverwrites.push({
-            id: roleToUse!,
-            allow: [PermissionsBitField.Flags.Connect],
-          })
+          if (roleToUse) {
+            permissionOverwrites.push({
+              id: roleToUse!,
+              allow: [PermissionsBitField.Flags.Connect],
+            })
+          }
+
+          // If viewRoleId is specified, allow viewing but deny connect
+          if (viewRoleId) {
+            permissionOverwrites.push({
+              id: viewRoleId!,
+              allow: [PermissionsBitField.Flags.ViewChannel],
+              deny: [PermissionsBitField.Flags.Connect],
+            })
+          }
 
           // Don't forget to allow the bot to connect
           if (guild.members.me) {
@@ -253,7 +279,7 @@ export async function createOrUpdateCreationChannel(
       // Set up permission overwrites if a role is specified
       let permissionOverwrites: OverwriteResolvable[] = []
 
-      if (requiredRoleId || joinRoleId) {
+      if (requiredRoleId || joinRoleId || viewRoleId) {
         permissionOverwrites = [
           {
             id: guild.roles.everyone.id,
@@ -264,10 +290,21 @@ export async function createOrUpdateCreationChannel(
         // If joinRoleId is specified, it overrides requiredRoleId for connection permissions
         const roleToUse = joinRoleId || requiredRoleId
 
-        permissionOverwrites.push({
-          id: roleToUse!,
-          allow: [PermissionsBitField.Flags.Connect],
-        })
+        if (roleToUse) {
+          permissionOverwrites.push({
+            id: roleToUse!,
+            allow: [PermissionsBitField.Flags.Connect],
+          })
+        }
+
+        // If viewRoleId is specified, allow viewing but deny connect
+        if (viewRoleId) {
+          permissionOverwrites.push({
+            id: viewRoleId!,
+            allow: [PermissionsBitField.Flags.ViewChannel],
+            deny: [PermissionsBitField.Flags.Connect],
+          })
+        }
 
         // Don't forget to allow the bot to connect
         if (guild.members.me) {
@@ -297,6 +334,7 @@ export async function createOrUpdateCreationChannel(
           name,
           requiredRoleId ?? null,
           joinRoleId ?? null,
+          viewRoleId ?? null,
           userLimit
         )
 
@@ -306,6 +344,7 @@ export async function createOrUpdateCreationChannel(
           name,
           required_role_id: requiredRoleId,
           join_role_id: joinRoleId,
+          view_role_id: viewRoleId,
           user_limit: userLimit,
           created_at: Date.now(),
           updated_at: Date.now(),

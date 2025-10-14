@@ -4,6 +4,7 @@ export interface CreationChannel {
   name: string
   required_role_id: string | null
   join_role_id: string | null
+  view_role_id: string | null
   user_limit: number | null
   created_at: number
   updated_at: number

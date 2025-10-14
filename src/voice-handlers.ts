@@ -98,6 +98,15 @@ async function handleUserJoinedChannel(state: VoiceState) {
         })
       }
 
+      // If view role is specified, allow viewing but deny connect
+      if (creationChannel.view_role_id) {
+        permissionOverwrites.push({
+          id: creationChannel.view_role_id,
+          allow: [PermissionsBitField.Flags.ViewChannel],
+          deny: [PermissionsBitField.Flags.Connect],
+        })
+      }
+
       // Always ensure the bot can manage the channel
       if (guild.members.me) {
         permissionOverwrites.push({
