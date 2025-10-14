@@ -14,6 +14,10 @@ import {
   deleteCreatedVoiceChannel,
 } from "./db/index.js"
 
+// In-memory counter for channel creation
+// Key: creation channel ID, Value: counter
+const channelCounters = new Map<string, number>()
+
 /**
  * Handle voice state updates to create or delete dynamic voice channels
  */
@@ -57,8 +61,6 @@ async function handleUserJoinedChannel(state: VoiceState) {
   try {
     // Create a new voice channel for the user
     const guild = state.guild
-    const username =
-      state.member?.displayName || state.member?.user.username || "User"
 
     // Check bot permissions
     const botMember = guild.members.me
@@ -71,6 +73,15 @@ async function handleUserJoinedChannel(state: VoiceState) {
 
     // Safely get parent category (if any)
     const parentId = state.channel?.parent?.id
+
+    // Get and increment the counter for this creation channel
+    const creationChannelId = state.channelId!
+    const currentCount = channelCounters.get(creationChannelId) || 0
+    const newCount = currentCount + 1
+    channelCounters.set(creationChannelId, newCount)
+
+    // Generate channel name based on creation channel name + counter
+    const channelName = `${creationChannel.name} ${newCount}`
 
     try {
       // Set up basic permission overwrites for the creator
@@ -119,7 +130,7 @@ async function handleUserJoinedChannel(state: VoiceState) {
       }
 
       const newChannel = await guild.channels.create({
-        name: `${username}'s channel`,
+        name: channelName,
         type: ChannelType.GuildVoice,
         parent: parentId,
         userLimit: creationChannel.user_limit || undefined,
